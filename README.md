@@ -25,3 +25,26 @@ for i in range(pairs):
     shutil.copy(png_file, 'destination_directory')
 
     print(f"Copied {json_files[i]} and {png_files[i]}")
+
+import os
+import shutil
+
+def divide_files_into_batches(src_folder, batch_size=2000):
+    files = sorted(os.listdir(src_folder))
+    
+    for i in range(0, len(files), batch_size):
+        batch = files[i:i+batch_size]
+        
+        # Create a new folder for each batch
+        dest_folder = os.path.join(src_folder, f'Batch_{i//batch_size + 1}')
+        os.makedirs(dest_folder, exist_ok=True)
+        
+        # Move files to the new folder
+        for file in batch:
+            src_path = os.path.join(src_folder, file)
+            dest_path = os.path.join(dest_folder, file)
+            shutil.move(src_path, dest_path)
+
+if __name__ == "__main__":
+    source_folder = "/path/to/source/folder"
+    divide_files_into_batches(source_folder)
