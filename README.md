@@ -48,3 +48,29 @@ def divide_files_into_batches(src_folder, batch_size=2000):
 if __name__ == "__main__":
     source_folder = "/path/to/source/folder"
     divide_files_into_batches(source_folder)
+
+import json
+
+def parse_json_file(file_path):
+    try:
+        with open(file_path, 'r') as json_file:
+            data = json.load(json_file)
+        print("JSON file successfully parsed.")
+        return data
+    except FileNotFoundError:
+        print(f"Error: File not found - {file_path}")
+    except IOError as e:
+        print(f"Error reading the file: {e}")
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON file: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+if __name__ == "__main__":
+    json_file_path = "/path/to/your/file.json"
+    parsed_data = parse_json_file(json_file_path)
+    
+    # Use the parsed data as needed
+    if parsed_data:
+        # Your code here to work with the parsed data
+        pass
