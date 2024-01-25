@@ -159,3 +159,28 @@ coco_file_path = 'path_to_coco_label_file.json'
 name_prefix_to_delete = "person_"  # Change this to the prefix of the names you want to delete
 
 delete_annotations_by_name(coco_file_path, name_prefix_to_delete)
+
+import json
+
+def delete_annotations_with_prefix(coco_file_path, prefix):
+    with open(coco_file_path, 'r') as f:
+        coco_data = json.load(f)
+
+    # Filter out annotations related to images with filenames starting with the specified prefix
+    filtered_annotations = [annotation for annotation in coco_data['annotations'] if coco_data['images'][annotation['image_id']]['file_name'].startswith(prefix)]
+
+    # Remove annotations with the specified prefix
+    for annotation in filtered_annotations:
+        image_id = annotation['image_id']
+        coco_data['annotations'] = [anno for anno in coco_data['annotations'] if anno['image_id'] != image_id]
+        coco_data['images'] = [image for image in coco_data['images'] if image['id'] != image_id]
+
+    # Save the modified COCO label file
+    with open(coco_file_path, 'w') as f:
+        json.dump(coco_data, f)
+
+# Example usage:
+coco_file_path = 'path_to_coco_label_file.json'
+prefix_to_delete = 'prefix_'  # Change this to the prefix of the filenames you want to delete annotations for
+
+delete_annotations_with_prefix(coco_file_path, prefix_to_delete)
