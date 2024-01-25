@@ -139,3 +139,23 @@ if num_gpus > 1:
 
 # Start training
 trainer.train()
+
+
+import json
+
+def delete_annotations_by_name(coco_file_path, name_prefix):
+    with open(coco_file_path, 'r') as f:
+        coco_data = json.load(f)
+
+    # Delete annotations with a name starting with the specified prefix
+    coco_data['annotations'] = [annotation for annotation in coco_data['annotations'] if not annotation['name'].startswith(name_prefix)]
+
+    # Save the modified COCO label file
+    with open(coco_file_path, 'w') as f:
+        json.dump(coco_data, f)
+
+# Example usage:
+coco_file_path = 'path_to_coco_label_file.json'
+name_prefix_to_delete = "person_"  # Change this to the prefix of the names you want to delete
+
+delete_annotations_by_name(coco_file_path, name_prefix_to_delete)
