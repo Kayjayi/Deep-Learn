@@ -184,3 +184,55 @@ coco_file_path = 'path_to_coco_label_file.json'
 prefix_to_delete = 'prefix_'  # Change this to the prefix of the filenames you want to delete annotations for
 
 delete_annotations_with_prefix(coco_file_path, prefix_to_delete)
+
+
+import os
+from PIL import Image
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Image as ImageFlowable, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+
+def find_matching_images(folder1, folder2):
+    matching_images = []
+    images1 = os.listdir(folder1)
+    images2 = os.listdir(folder2)
+    
+    for image1 in images1:
+        if image1 in images2:
+            matching_images.append((os.path.join(folder1, image1), os.path.join(folder2, image1)))
+    
+    return matching_images
+
+def create_pdf(matching_images, output_pdf):
+    doc = SimpleDocTemplate(output_pdf, pagesize=letter)
+    styles = getSampleStyleSheet()
+    flowables = []
+
+    for image1, image2 in matching_images:
+        img1 = Image.open(image1)
+        img2 = Image.open(image2)
+
+        img1.thumbnail((300, 300))
+        img2.thumbnail((300, 300))
+
+        img_flow1 = ImageFlowable(img1)
+        img_flow2 = ImageFlowable(img2)
+
+        flowables.append(img_flow1)
+        flowables.append(img_flow2)
+
+        caption1 = Paragraph(f"<b>{os.path.basename(image1)}</b>", styles["Normal"])
+        caption2 = Paragraph(f"<b>{os.path.basename(image2)}</b>", styles["Normal"])
+
+        flowables.append(caption1)
+        flowables.append(caption2)
+
+    doc.build(flowables)
+
+# Example usage:
+folder1 = "path/to/first/folder"
+folder2 = "path/to/second/folder"
+output_pdf = "output.pdf"
+
+matching_images = find_matching_images(folder1, folder2)
+create_pdf(matching_images, output_pdf)
