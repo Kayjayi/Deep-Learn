@@ -1,0 +1,64 @@
+import os
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Image as ImageFlowable, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+
+def find_matching_images(folder1, folder2):
+    matching_images = []
+    images1 = os.listdir(folder1)
+    images2 = os.listdir(folder2)
+    
+    for image1 in images1:
+        if image1 in images2:
+            matching_images.append((os.path.join(folder1, image1), os.path.join(folder2, image1)))
+    
+    return matching_images
+
+def calculate_resize_dimensions(image_size, page_size):
+    image_width, image_height = image_size
+    page_width, page_height = page_size
+    aspect_ratio = image_width / image_height
+    
+    if aspect_ratio > 1:
+        new_width = min(image_width, page_width)
+        new_height = new_width / aspect_ratio
+    else:
+        new_height = min(image_height, page_height)
+        new_width = new_height * aspect_ratio
+    
+    return int(new_width), int(new_height)
+
+def create_pdf(matching_images, output_pdf):
+    doc = SimpleDocTemplate(output_pdf, pagesize=letter)
+    styles = getSampleStyleSheet()
+    flowables = []
+
+    for image1, image2 in matching_images:
+        img1_size = Image.open(image1).size
+        img2_size = Image.open(image2).size
+
+        # Resize images to fit page
+        img1_width, img1_height = calculate_resize_dimensions(img1_size, letter)
+        img2_width, img2_height = calculate_resize_dimensions(img2_size, letter)
+
+        img_flow1 = ImageFlowable(image1, width=img1_width, height=img1_height)
+        img_flow2 = ImageFlowable(image2, width=img2_width, height=img2_height)
+
+        flowables.append(img_flow1)
+        flowables.append(img_flow2)
+
+        caption1 = Paragraph(f"<b>{os.path.basename(image1)}</b>", styles["Normal"])
+        caption2 = Paragraph(f"<b>{os.path.basename(image2)}</b>", styles["Normal"])
+
+        flowables.append(caption1)
+        flowables.append(caption2)
+
+    doc.build(flowables)
+
+# Example usage:
+folder1 = "path/to/first/folder"
+folder2 = "path/to/second/folder"
+output_pdf = "output.pdf"
+
+matching_images = find_matching_images(folder1, folder2)
+create_pdf(matching_images, output_pdf)
