@@ -1,0 +1,38 @@
+from PIL import Image
+
+def compress_image(image_path, quality=80):
+    img = Image.open(image_path)
+    img.save(image_path, quality=quality)
+
+def create_pdf(matching_images, output_pdf):
+    doc = SimpleDocTemplate(output_pdf, pagesize=letter)
+    styles = getSampleStyleSheet()
+    flowables = []
+
+    for image1, image2 in matching_images:
+        img1_size = Image.open(image1).size
+        img2_size = Image.open(image2).size
+
+        # Resize images to fit page
+        img1_width, img1_height = calculate_resize_dimensions(img1_size, letter)
+        img2_width, img2_height = calculate_resize_dimensions(img2_size, letter)
+
+        # Compress images
+        compress_image(image1)
+        compress_image(image2)
+
+        img_flow1 = ImageFlowable(image1, width=img1_width, height=img1_height)
+        img_flow2 = ImageFlowable(image2, width=img2_width, height=img2_height)
+
+        flowables.append(img_flow1)
+        flowables.append(Spacer(10, 10))  # Add a spacer between the images
+        flowables.append(img_flow2)
+        flowables.append(Spacer(10, 10))  # Add another spacer between the images
+
+        caption1 = Paragraph(f"<b>{os.path.basename(image1)}</b>", styles["Normal"])
+        caption2 = Paragraph(f"<b>{os.path.basename(image2)}</b>", styles["Normal"])
+
+        flowables.append(caption1)
+        flowables.append(caption2)
+
+    doc.build(flowables)
