@@ -1,0 +1,63 @@
+from PIL import Image
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Image as ImageFlowable, Spacer, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+import os
+
+def compress_image(image_path, quality=80):
+    img = Image.open(image_path)
+    img.save(image_path, quality=quality)
+
+def calculate_resize_dimensions(image_sizes, page_size):
+    page_width, page_height = page_size
+    total_images = len(image_sizes)
+    total_width = sum([size[0] for size in image_sizes])
+    total_height = max([size[1] for size in image_sizes])
+    aspect_ratio = total_width / total_height
+    
+    new_width = min(total_width, page_width)
+    new_height = new_width / aspect_ratio
+
+    return int(new_width / total_images), int(new_height)
+
+def create_pdf(matching_images, output_pdf):
+    doc = SimpleDocTemplate(output_pdf, pagesize=letter)
+    styles = getSampleStyleSheet()
+    flowables = []
+
+    images = []
+    for image1, image2, image3 in matching_images:
+        img1_size = Image.open(image1).size
+        img2_size = Image.open(image2).size
+        img3_size = Image.open(image3).size
+        images.extend([img1_size, img2_size, img3_size])
+
+        # Compress images
+        compress_image(image1)
+        compress_image(image2)
+        compress_image(image3)
+
+    img_width, img_height = calculate_resize_dimensions(images, letter)
+
+    for i in range(0, len(matching_images), 3):
+        images_in_row = matching_images[i:i+3]
+
+        for image1, image2, image3 in images_in_row:
+            img_flow1 = ImageFlowable(image1, width=img_width, height=img_height)
+            img_flow2 = ImageFlowable(image2, width=img_width, height=img_height)
+            img_flow3 = ImageFlowable(image3, width=img_width, height=img_height)
+
+            flowables.append(img_flow1)
+            flowables.append(img_flow2)
+            flowables.append(img_flow3)
+            flowables.append(Spacer(10, 10))  # Add spacer between images
+
+            caption1 = Paragraph(f"<b>{os.path.basename(image1)}</b>", styles["Normal"])
+            caption2 = Paragraph(f"<b>{os.path.basename(image2)}</b>", styles["Normal"])
+            caption3 = Paragraph(f"<b>{os.path.basename(image3)}</b>", styles["Normal"])
+
+            flowables.append(caption1)
+            flowables.append(caption2)
+            flowables.append(caption3)
+
+    doc.build(flowables)
