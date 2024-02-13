@@ -1,0 +1,87 @@
+from PIL import Image
+from reportlab.lib.pagesizes import landscape, letter
+from reportlab.platypus import SimpleDocTemplate, Image as ImageFlowable, Spacer, Table
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.platypus import Paragraph
+import os
+
+def compress_image(image_path, quality=80):
+    img = Image.open(image_path)
+    img.save(image_path, quality=quality)
+
+def calculate_resize_dimensions(image_sizes, page_size):
+    page_width, page_height = page_size
+    total_images = len(image_sizes)
+    total_width = sum([size[0] for size in image_sizes])
+    total_height = max([size[1] for size in image_sizes])
+    aspect_ratio = total_width / total_height
+    
+    new_width = min(total_width, page_width)
+    new_height = new_width / aspect_ratio
+
+    return int(new_width / total_images), int(new_height)
+
+def create_pdf(folder1, folder2, folder3, output_pdf):
+    doc = SimpleDocTemplate(output_pdf, pagesize=landscape(letter))
+    styles = getSampleStyleSheet()
+    flowables = []
+
+    images = []
+    captions = []
+    for file1 in os.listdir(folder1):
+        if file1 in os.listdir(folder2) and file1 in os.listdir(folder3):
+            image1 = os.path.join(folder1, file1)
+            image2 = os.path.join(folder2, file1)
+            image3 = os.path.join(folder3, file1)
+
+            img1_size = Image.open(image1).size
+            img2_size = Image.open(image2).size
+            img3_size = Image.open(image3).size
+            images.extend([img1_size, img2_size, img3_size])
+
+            # Compress images
+            compress_image(image1)
+            compress_image(image2)
+            compress_image(image3)
+
+            # Get captions
+            caption1 = os.path.basename(image1)
+            caption2 = os.path.basename(image2)
+            caption3 = os.path.basename(image3)
+            captions.append((caption1, caption2, caption3))
+
+    img_width, img_height = calculate_resize_dimensions(images, landscape(letter))
+    img_width *= 1.5  # Increase image width
+    img_height *= 1.5  # Increase image height
+
+    image_rows = []
+    for file1, caption in zip(os.listdir(folder1), captions):
+        if file1 in os.listdir(folder2) and file1 in os.listdir(folder3):
+            image1 = ImageFlowable(os.path.join(folder1, file1), width=img_width, height=img_height)
+            image2 = ImageFlowable(os.path.join(folder2, file1), width=img_width, height=img_height)
+            image3 = ImageFlowable(os.path.join(folder3, file1), width=img_width, height=img_height)
+            
+            # Add captions to images
+            caption1, caption2, caption3 = caption
+            image1.caption = caption1
+            image2.caption = caption2
+            image3.caption = caption3
+
+            image_rows.append([image1, image2, image3])
+
+    # Create captions row
+    caption_row = []
+    for caption in captions:
+        caption_row.append([Paragraph(caption_text, styles["Normal"]) for caption_text in caption])
+
+    max_caption_height = max([caption.wrap(img_width, img_height)[1] for caption_list in caption_row for caption in caption_list])
+    for caption_list in caption_row:
+        for caption in caption_list:
+            caption.width = img_width
+            caption.height = max_caption_height
+
+    table = Table([image_rows, caption_row], colWidths=[img_width, img_width, img_width], rowHeights=[img_height, max_caption_height])
+    flowables.append(table)
+
+    doc.build(flowables)
