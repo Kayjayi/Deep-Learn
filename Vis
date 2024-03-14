@@ -93,3 +93,27 @@ for filename in os.listdir(input_folder):
         cv2.imwrite(output_image_path, image)
 
         print(f"Visualized image saved at: {output_image_path}")
+
+
+from PIL import Image, ImageEnhance
+
+def brightness(image_path):
+    img = Image.open(image_path)
+    enhancer = ImageEnhance.Brightness(img)
+    brightness_level = enhancer.enhance(1.0)
+    return brightness_level
+
+def adjust_brightness(image_path, factor):
+    img = Image.open(image_path)
+    enhancer = ImageEnhance.Brightness(img)
+    adjusted_img = enhancer.enhance(factor)
+    adjusted_img.show()  # Display adjusted image
+    return adjusted_img
+
+# Example usage:
+image_path = "example.jpg"
+brightness_level = brightness(image_path)
+print("Brightness level:", brightness_level)
+
+# Adjust brightness by a factor (1.0 means no change, less than 1.0 makes it darker, more than 1.0 makes it brighter)
+adjusted_img = adjust_brightness(image_path, 1.5)  # Example: Increase brightness by 50%
