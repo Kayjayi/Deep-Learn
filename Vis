@@ -149,3 +149,53 @@ save_image(adjusted_brightness_img, output_path_brightness)
 # Adjust exposure
 adjusted_exposure_img = adjust_exposure(image_path, 1.5)  # Example: Increase exposure by 50%
 save_image(adjusted_exposure_img, output_path_exposure)
+
+from PIL import Image, ImageEnhance
+
+def enhance_image(image_path, output_path):
+    # Open the image
+    img = Image.open(image_path)
+    
+    # Adjust brightness
+    brightness_factor = 1.2
+    
+    # Adjust exposure
+    exposure_factor = 1.2
+    
+    # Adjust contrast
+    contrast_factor = 1.2
+    
+    # Adjust saturation
+    saturation_factor = 1.2
+    
+    # Adjust sharpness
+    sharpness_factor = 1.2
+    
+    # Enhance brightness
+    enhancer = ImageEnhance.Brightness(img)
+    img = enhancer.enhance(brightness_factor)
+    
+    # Enhance exposure
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(exposure_factor)
+    
+    # Enhance contrast
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(contrast_factor)
+    
+    # Enhance saturation
+    enhancer = ImageEnhance.Color(img)
+    img = enhancer.enhance(saturation_factor)
+    
+    # Enhance sharpness
+    enhancer = ImageEnhance.Sharpness(img)
+    img = enhancer.enhance(sharpness_factor)
+    
+    # Save the enhanced image
+    img.save(output_path, format='JPEG')
+    img.show()
+
+# Example usage:
+image_path = "example.jpg"
+output_path = "enhanced_image.jpg"  # Output path for the enhanced image
+enhance_image(image_path, output_path)
