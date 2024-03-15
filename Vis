@@ -199,3 +199,21 @@ def enhance_image(image_path, output_path):
 image_path = "example.jpg"
 output_path = "enhanced_image.jpg"  # Output path for the enhanced image
 enhance_image(image_path, output_path)
+
+from PIL import Image, ImageFilter
+
+def remove_grains(image_path, output_path):
+    # Open the image
+    img = Image.open(image_path)
+    
+    # Apply Gaussian blur filter to remove grains
+    img_filtered = img.filter(ImageFilter.GaussianBlur(radius=2))
+    
+    # Save the filtered image
+    img_filtered.save(output_path, format='JPEG')
+    img_filtered.show()
+
+# Example usage:
+image_path = "example.jpg"
+output_path = "grain_removed_image.jpg"  # Output path for the grain removed image
+remove_grains(image_path, output_path)
