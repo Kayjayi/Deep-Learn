@@ -117,3 +117,35 @@ print("Brightness level:", brightness_level)
 
 # Adjust brightness by a factor (1.0 means no change, less than 1.0 makes it darker, more than 1.0 makes it brighter)
 adjusted_img = adjust_brightness(image_path, 1.5)  # Example: Increase brightness by 50%
+
+
+from PIL import Image, ImageEnhance
+
+def adjust_brightness(image_path, factor):
+    img = Image.open(image_path)
+    enhancer = ImageEnhance.Brightness(img)
+    adjusted_img = enhancer.enhance(factor)
+    return adjusted_img
+
+def adjust_exposure(image_path, factor):
+    img = Image.open(image_path)
+    enhancer = ImageEnhance.Contrast(img)
+    adjusted_img = enhancer.enhance(factor)
+    return adjusted_img
+
+def save_image(image, output_path):
+    image.save(output_path, format='JPEG')  # Save image with JPEG format
+    image.show()  # Display image
+
+# Example usage:
+image_path = "example.jpg"
+output_path_brightness = "adjusted_brightness.jpg"  # Output path for adjusted brightness image
+output_path_exposure = "adjusted_exposure.jpg"  # Output path for adjusted exposure image
+
+# Adjust brightness
+adjusted_brightness_img = adjust_brightness(image_path, 1.5)  # Example: Increase brightness by 50%
+save_image(adjusted_brightness_img, output_path_brightness)
+
+# Adjust exposure
+adjusted_exposure_img = adjust_exposure(image_path, 1.5)  # Example: Increase exposure by 50%
+save_image(adjusted_exposure_img, output_path_exposure)
