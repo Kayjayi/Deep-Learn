@@ -284,3 +284,59 @@ for filename in os.listdir(input_folder):
 
 print("Processing complete.")
 
+
+import os
+import cv2
+
+# Function to process each image
+def process_image(input_path, output_path, center_x, center_y, rectangle_width, rectangle_height):
+    # Read the image
+    image = cv2.imread(input_path)
+
+    # Get image dimensions
+    height, width, _ = image.shape
+
+    # Calculate rectangle boundaries
+    left = max(0, center_x - rectangle_width // 2)
+    right = min(width, center_x + rectangle_width // 2)
+    top = max(0, center_y - rectangle_height // 2)
+    bottom = min(height, center_y + rectangle_height // 2)
+
+    # Set pixel values outside the rectangle to zero
+    for y in range(height):
+        for x in range(width):
+            if x < left or x >= right or y < top or y >= bottom:
+                image[y, x] = [0, 0, 0]  # Set pixel values to zero
+
+    # Save the modified image
+    cv2.imwrite(output_path, image)
+
+# Folder containing input images
+input_folder = "input_images"
+
+# Folder to save processed images
+output_folder = "output_images"
+
+# Define center coordinates and rectangle dimensions
+center_x = 200
+center_y = 150
+rectangle_width = 100
+rectangle_height = 80
+
+# Create output folder if it doesn't exist
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+
+# Loop through the input folder
+for filename in os.listdir(input_folder):
+    if filename.endswith(".jpg") or filename.endswith(".png"):
+        # Construct input and output paths
+        input_path = os.path.join(input_folder, filename)
+        output_path = os.path.join(output_folder, filename)
+
+        # Process the image
+        process_image(input_path, output_path, center_x, center_y, rectangle_width, rectangle_height)
+
+print("Processing complete.")
+
+
