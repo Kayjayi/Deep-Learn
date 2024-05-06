@@ -236,3 +236,51 @@ output_pdf = "output.pdf"
 
 matching_images = find_matching_images(folder1, folder2)
 create_pdf(matching_images, output_pdf)
+
+
+import os
+import cv2
+
+# Function to process each image
+def process_image(input_path, output_path):
+    # Read the image
+    image = cv2.imread(input_path)
+
+    # Get image dimensions
+    height, width, _ = image.shape
+
+    # Define the center coordinates
+    center_x = width // 2
+    center_y = height // 2
+
+    # Set pixel values outside the center to zero
+    for y in range(height):
+        for x in range(width):
+            if (x - center_x) ** 2 + (y - center_y) ** 2 > min(center_x, center_y) ** 2:
+                image[y, x] = [0, 0, 0]  # Set pixel values to zero
+
+    # Save the modified image
+    cv2.imwrite(output_path, image)
+
+# Folder containing input images
+input_folder = "input_images"
+
+# Folder to save processed images
+output_folder = "output_images"
+
+# Create output folder if it doesn't exist
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+
+# Loop through the input folder
+for filename in os.listdir(input_folder):
+    if filename.endswith(".jpg") or filename.endswith(".png"):
+        # Construct input and output paths
+        input_path = os.path.join(input_folder, filename)
+        output_path = os.path.join(output_folder, filename)
+
+        # Process the image
+        process_image(input_path, output_path)
+
+print("Processing complete.")
+
