@@ -1,0 +1,65 @@
+import os
+import torch
+from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, hooks, launch
+from detectron2.config import get_cfg
+from detectron2.data import build_detection_train_loader
+from detectron2.checkpoint import DetectionCheckpointer
+
+class BestTrainingMetricCheckpointer(hooks.HookBase):
+    def __init__(self, eval_period, checkpointer, metric_name, mode="max"):
+        self._period = eval_period
+        self.checkpointer = checkpointer
+        self.metric_name = metric_name
+        self.mode = mode
+        self.best_metric = None
+
+    def after_step(self):
+        if self.trainer.iter % self._period == 0:
+            metrics = self.trainer.storage.latest()
+            current_metric = metrics[self.metric_name]
+            
+            if self.best_metric is None or \
+               (self.mode == "max" and current_metric > self.best_metric) or \
+               (self.mode == "min" and current_metric < self.best_metric):
+                self.best_metric = current_metric
+                self.checkpointer.save("best_model")
+
+class Trainer(DefaultTrainer):
+    @classmethod
+    def build_train_loader(cls, cfg):
+        return build_detection_train_loader(cfg)
+
+def main(args):
+    cfg = get_cfg()
+    cfg.merge_from_file(args.config_file)
+    cfg.merge_from_list(args.opts)
+    cfg.freeze()
+    default_setup(cfg, args)
+
+    model = Trainer.build_model(cfg)
+    optimizer = Trainer.build_optimizer(cfg, model)
+
+    checkpointer = DetectionCheckpointer(model, cfg.OUTPUT_DIR, optimizer=optimizer)
+    trainer = Trainer(cfg)
+    
+    best_metric_checkpointer = BestTrainingMetricCheckpointer(
+        eval_period=cfg.SOLVER.CHECKPOINT_PERIOD,
+        checkpointer=checkpointer,
+        metric_name="total_loss",  # Use the appropriate training metric here
+        mode="min"  # Usually, we want to minimize the loss
+    )
+
+    trainer.register_hooks([best_metric_checkpointer])
+    
+    trainer.train()
+
+if __name__ == "__main__":
+    args = default_argument_parser().parse_args()
+    launch(
+        main,
+        args.num_gpus,
+        num_machines=args.num_machines,
+        machine_rank=args.machine_rank,
+        dist_url=args.dist_url,
+        args=(args,),
+    )
