@@ -1,0 +1,79 @@
+import os
+import torch
+from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, hooks, launch
+from detectron2.config import get_cfg
+from detectron2.data import build_detection_train_loader
+from detectron2.evaluation import COCOEvaluator, inference_on_dataset
+from detectron2.data import build_detection_test_loader
+from detectron2.checkpoint import DetectionCheckpointer
+from detectron2.evaluation import DatasetEvaluators
+
+class BestCheckpointer(hooks.BestCheckpointer):
+    def __init__(self, eval_period, checkpointer, val_loader, metric_name, mode="max", file_prefix="best_model"):
+        super().__init__(eval_period, checkpointer, metric_name, mode, file_prefix)
+        self.val_loader = val_loader
+
+    def _do_eval(self):
+        results = inference_on_dataset(self.trainer.model, self.val_loader, self.trainer.test_evaluator)
+        # Assuming the metric is under 'metrics' key, which depends on evaluator implementation
+        metric_value = results['bbox']['AP50']  # Adjust to the exact path for 'fastrcnn/cls_accuracy'
+        if isinstance(metric_value, (list, tuple)):
+            metric_value = metric_value[0]
+        return metric_value
+
+class Trainer(DefaultTrainer):
+    @classmethod
+    def build_evaluator(cls, cfg, dataset_name, output_folder=None):
+        if output_folder is None:
+            output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
+        return COCOEvaluator(dataset_name, cfg, True, output_folder)
+
+    @classmethod
+    def build_train_loader(cls, cfg):
+        return build_detection_train_loader(cfg)
+
+    @classmethod
+    def build_test_loader(cls, cfg, dataset_name):
+        return build_detection_test_loader(cfg, dataset_name)
+
+def main(args):
+    cfg = get_cfg()
+    cfg.merge_from_file(args.config_file)
+    cfg.merge_from_list(args.opts)
+    cfg.freeze()
+    default_setup(cfg, args)
+
+    model = Trainer.build_model(cfg)
+    optimizer = Trainer.build_optimizer(cfg, model)
+
+    checkpointer = DetectionCheckpointer(model, cfg.OUTPUT_DIR, optimizer=optimizer)
+    trainer = Trainer(cfg)
+    
+    val_loader = Trainer.build_test_loader(cfg, cfg.DATASETS.TEST[0])
+    evaluator = Trainer.build_evaluator(cfg, cfg.DATASETS.TEST[0])
+
+    trainer.test_evaluator = DatasetEvaluators([evaluator])
+
+    # Hook for the best checkpointer
+    best_checkpointer = BestCheckpointer(
+        eval_period=cfg.TEST.EVAL_PERIOD,
+        checkpointer=checkpointer,
+        val_loader=val_loader,
+        metric_name="fastrcnn/cls_accuracy",  # Use the appropriate metric here
+        mode="max"
+    )
+
+    trainer.register_hooks([best_checkpointer])
+    
+    trainer.train()
+
+if __name__ == "__main__":
+    args = default_argument_parser().parse_args()
+    launch(
+        main,
+        args.num_gpus,
+        num_machines=args.num_machines,
+        machine_rank=args.machine_rank,
+        dist_url=args.dist_url,
+        args=(args,),
+    )
