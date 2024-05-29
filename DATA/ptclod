@@ -1,0 +1,51 @@
+#Random Sampling:
+import numpy as np
+
+# Assume point_cloud is your original Nx3 NumPy array
+point_cloud = np.random.rand(1000, 3)  # Example point cloud with 1000 points
+
+# Reduce to a desired number of points, e.g., 100
+desired_num_points = 100
+indices = np.random.choice(point_cloud.shape[0], desired_num_points, replace=False)
+reduced_point_cloud = point_cloud[indices]
+
+#Voxel Grid Downsampling:
+def voxel_downsample(point_cloud, voxel_size):
+    min_bounds = np.amin(point_cloud, axis=0)
+    max_bounds = np.amax(point_cloud, axis=0)
+    dims = np.ceil((max_bounds - min_bounds) / voxel_size).astype(int)
+
+    voxel_indices = np.floor((point_cloud - min_bounds) / voxel_size).astype(int)
+    voxel_dict = {}
+
+    for idx, point in enumerate(point_cloud):
+        voxel_key = tuple(voxel_indices[idx])
+        if voxel_key not in voxel_dict:
+            voxel_dict[voxel_key] = []
+        voxel_dict[voxel_key].append(point)
+
+    downsampled_points = [np.mean(points, axis=0) for points in voxel_dict.values()]
+    return np.array(downsampled_points)
+
+# Example usage
+voxel_size = 0.1
+reduced_point_cloud = voxel_downsample(point_cloud, voxel_size)
+
+
+#Statistical Outlier Removal:
+from sklearn.neighbors import NearestNeighbors
+
+def statistical_outlier_removal(point_cloud, k=20, z_thresh=2.0):
+    neighbors = NearestNeighbors(n_neighbors=k).fit(point_cloud)
+    distances, _ = neighbors.kneighbors(point_cloud)
+
+    mean_distances = np.mean(distances[:, 1:], axis=1)
+    std_distances = np.std(distances[:, 1:], axis=1)
+
+    z_scores = (mean_distances - np.mean(mean_distances)) / np.std(mean_distances)
+    inliers = np.abs(z_scores) < z_thresh
+
+    return point_cloud[inliers]
+
+# Example usage
+reduced_point_cloud = statistical_outlier_removal(point_cloud)
