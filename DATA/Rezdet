@@ -1,0 +1,89 @@
+import cv2
+import numpy as np
+import torch
+from detectron2.engine import DefaultPredictor
+from detectron2.config import get_cfg
+from detectron2.utils.visualizer import Visualizer
+
+# Configure the model
+cfg = get_cfg()
+cfg.merge_from_file("path/to/config/file.yaml")
+cfg.MODEL.WEIGHTS = "path/to/weights.pth"
+cfg.INPUT.MIN_SIZE_TEST = 800  # Resize the shorter side to this size
+cfg.INPUT.MAX_SIZE_TEST = 1333  # Resize the longer side to this size
+cfg.MODEL.DEVICE = "cuda"  # Ensure the model runs on GPU
+
+predictor = DefaultPredictor(cfg)
+
+def resize_image_gpu(image, min_size, max_size):
+    height, width = image.shape[:2]
+    scale = min(min_size / min(height, width), max_size / max(height, width))
+    new_height, new_width = int(height * scale), int(width * scale)
+    
+    # Convert the image to a PyTorch tensor and move it to the GPU
+    image_tensor = torch.as_tensor(image.astype("float32")).permute(2, 0, 1).unsqueeze(0).cuda()
+    
+    # Resize the image tensor
+    resized_tensor = torch.nn.functional.interpolate(image_tensor, size=(new_height, new_width), mode="bilinear", align_corners=False)
+    
+    # Convert back to numpy array and return
+    resized_image = resized_tensor.squeeze(0).permute(1, 2, 0).cpu().numpy().astype("uint8")
+    
+    return resized_image, scale
+
+def scale_predictions(predictions, scale_factor):
+    # Scale bounding boxes
+    predictions.pred_boxes.tensor /= scale_factor
+
+    # Scale masks if they exist
+    if predictions.has("pred_masks"):
+        predictions.pred_masks = predictions.pred_masks.float().unsqueeze(1)
+        predictions.pred_masks = torch.nn.functional.interpolate(predictions.pred_masks, scale_factor=scale_factor, mode="bilinear", align_corners=False)
+        predictions.pred_masks = predictions.pred_masks.squeeze(1)
+
+    return predictions
+
+def extract_output_parameters(predictions):
+    boxes = predictions.pred_boxes.tensor.numpy()
+    scores = predictions.scores.numpy()
+    classes = predictions.pred_classes.numpy()
+    if predictions.has("pred_masks"):
+        masks = predictions.pred_masks.numpy()
+    else:
+        masks = None
+    return boxes, scores, classes, masks
+
+# Read the image
+image = cv2.imread("path/to/large_image.jpg")
+original_height, original_width = image.shape[:2]
+
+# Resize the image for inference using GPU
+resized_image, scale = resize_image_gpu(image, cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MAX_SIZE_TEST)
+
+# Perform inference on the resized image
+outputs = predictor(resized_image)["instances"].to("cpu")
+
+# Scale predictions back to the original image size
+scaled_outputs = scale_predictions(outputs, scale)
+
+# Extract output parameters
+boxes, scores, classes, masks = extract_output_parameters(scaled_outputs)
+
+# Visualize the results
+v = Visualizer(image[:, :, ::-1], scale=1.0)
+out = v.draw_instance_predictions(scaled_outputs)
+result_image = out.get_image()[:, :, ::-1]
+
+# Save or display the result image
+cv2.imwrite("result_image.jpg", result_image)
+# cv2.imshow("Result", result_image)
+# cv2.waitKey(0)
+
+# Print or return the outputs
+print("Boxes:", boxes)
+print("Scores:", scores)
+print("Classes:", classes)
+if masks is not None:
+    print("Masks shape:", masks.shape)
+else:
+    print("No masks found")
