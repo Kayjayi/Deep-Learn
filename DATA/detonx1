@@ -1,0 +1,54 @@
+import torch
+from detectron2.config import get_cfg
+from detectron2.engine import DefaultPredictor
+from detectron2.modeling import build_model
+from detectron2.checkpoint import DetectionCheckpointer
+from detectron2.export import export_onnx_model
+
+def export_detectron2_model_to_onnx(config_path, weights_path, output_onnx_path):
+    # Load configuration and model
+    cfg = get_cfg()
+    cfg.merge_from_file(config_path)
+    cfg.MODEL.WEIGHTS = weights_path
+    model = build_model(cfg)
+    DetectionCheckpointer(model).load(weights_path)
+
+    # Export to ONNX
+    export_onnx_model(cfg, model, output_onnx_path)
+
+def inference_with_onnx_model(onnx_model_path, image):
+    # Load ONNX model
+    onnx_model = torch.onnx.load(onnx_model_path)
+
+    # Create an inference session
+    ort_session = onnxruntime.InferenceSession(onnx_model_path)
+
+    # Preprocess the input image
+    # (You need to implement this based on your model's input requirements)
+
+    # Perform inference
+    ort_inputs = {ort_session.get_inputs()[0].name: image}
+    ort_outputs = ort_session.run(None, ort_inputs)
+
+    # Postprocess the outputs
+    # (You need to implement this based on your model's output format)
+
+    return ort_outputs
+
+# Example usage
+if __name__ == "__main__":
+    config_path = "path/to/config.yaml"
+    weights_path = "path/to/weights.pth"
+    output_onnx_path = "output/model.onnx"
+
+    # Export Detectron2 model to ONNX
+    export_detectron2_model_to_onnx(config_path, weights_path, output_onnx_path)
+
+    # Load input image (you need to provide your own input image)
+    image = ...
+
+    # Perform inference with ONNX model
+    ort_outputs = inference_with_onnx_model(output_onnx_path, image)
+
+    # Process and visualize the inference results
+    # (You need to implement this based on your model's output format)
