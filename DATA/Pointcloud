@@ -1,0 +1,66 @@
+#Downsampling 
+
+import numpy as np
+
+def downsample_point_cloud(points, voxel_size):
+    """
+    Downsample the point cloud using a voxel grid filter.
+    """
+    # Create a voxel grid with the specified voxel size
+    grid_indices = np.floor(points / voxel_size).astype(np.int32)
+    
+    # Get unique voxel indices
+    unique_indices = np.unique(grid_indices, axis=0)
+    
+    # Compute the mean point for each voxel
+    downsampled_points = np.array([points[grid_indices == idx].mean(axis=0) for idx in unique_indices])
+    
+    return downsampled_points
+
+# Load point cloud
+point_cloud = np.load("path/to/large_point_cloud.npy")
+
+# Downsample point cloud
+voxel_size = 0.05  # Adjust voxel size as needed
+downsampled_point_cloud = downsample_point_cloud(point_cloud, voxel_size)
+
+# Save downsampled point cloud
+np.save("downsampled_point_cloud.npy", downsampled_point_cloud)
+
+#Quantization
+import numpy as np
+
+def quantize_point_cloud(points, precision):
+    """
+    Quantize the point cloud coordinates.
+    """
+    quantized_points = np.round(points / precision) * precision
+    return quantized_points
+
+# Load point cloud
+point_cloud = np.load("path/to/large_point_cloud.npy")
+
+# Quantize point cloud
+precision = 0.01  # Adjust precision as needed
+quantized_point_cloud = quantize_point_cloud(point_cloud, precision)
+
+# Save quantized point cloud
+np.save("quantized_point_cloud.npy", quantized_point_cloud)
+
+#Compression
+
+import numpy as np
+import gzip
+
+def save_compressed_npy(filename, array):
+    """
+    Save a numpy array to a compressed .npy file.
+    """
+    with gzip.GzipFile(filename, 'w') as f:
+        np.save(f, array)
+
+# Load point cloud
+point_cloud = np.load("path/to/large_point_cloud.npy")
+
+# Save compressed point cloud
+save_compressed_npy("compressed_point_cloud.npy.gz", point_cloud)
