@@ -64,3 +64,85 @@ point_cloud = np.load("path/to/large_point_cloud.npy")
 
 # Save compressed point cloud
 save_compressed_npy("compressed_point_cloud.npy.gz", point_cloud)
+
+import numpy as np
+import numba
+from numba import njit, prange
+
+@njit(parallel=True)
+def downsample_point_cloud_numba(points, voxel_size):
+    grid_indices = np.floor(points / voxel_size).astype(np.int32)
+    unique_indices = np.unique(grid_indices, axis=0)
+    downsampled_points = np.zeros((len(unique_indices), points.shape[1]))
+
+    for i in prange(len(unique_indices)):
+        indices = np.all(grid_indices == unique_indices[i], axis=1)
+        downsampled_points[i] = points[indices].mean(axis=0)
+    
+    return downsampled_points
+
+# Load point cloud
+point_cloud = np.load("path/to/large_point_cloud.npy")
+
+# Downsample point cloud
+voxel_size = 0.05  # Adjust voxel size as needed
+downsampled_point_cloud = downsample_point_cloud_numba(point_cloud, voxel_size)
+
+# Save downsampled point cloud
+np.save("downsampled_point_cloud.npy", downsampled_point_cloud)
+
+Using Numba for Parallel Processing on CPU
+Numba is a Just-In-Time (JIT) compiler that translates a subset of Python and NumPy code into fast machine code. It can significantly speed up computation by leveraging parallel processing.
+
+Using cuPy for GPU Acceleration
+cuPy is a library that implements NumPy-compatible multi-dimensional array on CUDA. It allows you to perform array operations on GPU, which can significantly speed up computations for large datasets.
+
+import cupy as cp
+import numpy as np
+
+def downsample_point_cloud_cupy(points, voxel_size):
+    points_gpu = cp.asarray(points)
+    grid_indices = cp.floor(points_gpu / voxel_size).astype(cp.int32)
+    unique_indices = cp.unique(grid_indices, axis=0)
+    downsampled_points = cp.zeros((len(unique_indices), points.shape[1]))
+
+    for i in range(len(unique_indices)):
+        indices = cp.all(grid_indices == unique_indices[i], axis=1)
+        downsampled_points[i] = points_gpu[indices].mean(axis=0)
+
+    return downsampled_points.get()
+
+# Load point cloud
+point_cloud = np.load("path/to/large_point_cloud.npy")
+
+# Downsample point cloud using GPU
+voxel_size = 0.05  # Adjust voxel size as needed
+downsampled_point_cloud = downsample_point_cloud_cupy(point_cloud, voxel_size)
+
+# Save downsampled point cloud
+np.save("downsampled_point_cloud.npy", downsampled_point_cloud)
+
+
+Using Open3D with Multi-threading
+Open3D provides a voxel downsampling function that is optimized and can be further accelerated using multi-threading. However, it's primarily CPU-based.
+
+
+import open3d as o3d
+import numpy as np
+
+# Load point cloud
+point_cloud = np.load("path/to/large_point_cloud.npy")
+
+# Create Open3D point cloud
+pcd = o3d.geometry.PointCloud()
+pcd.points = o3d.utility.Vector3dVector(point_cloud[:, :3])
+
+# Downsample using voxel grid
+voxel_size = 0.05  # Adjust voxel size as needed
+downsampled_pcd = pcd.voxel_down_sample(voxel_size)
+
+# Convert back to numpy array
+downsampled_point_cloud = np.asarray(downsampled_pcd.points)
+
+# Save downsampled point cloud
+np.save("downsampled_point_cloud.npy", downsampled_point_cloud)
