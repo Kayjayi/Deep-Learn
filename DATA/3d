@@ -1,0 +1,29 @@
+import open3d as o3d
+
+def downsample_point_cloud(input_file, output_file, voxel_size):
+    # Load the point cloud
+    pcd = o3d.io.read_point_cloud(input_file)
+    
+    # Print original number of points
+    print(f"Original point cloud has {len(pcd.points)} points.")
+    
+    # Perform voxel grid downsampling
+    downsampled_pcd = pcd.voxel_down_sample(voxel_size=voxel_size)
+    
+    # Print new number of points
+    print(f"Downsampled point cloud has {len(downsampled_pcd.points)} points.")
+    
+    # Save the downsampled point cloud
+    o3d.io.write_point_cloud(output_file, downsampled_pcd)
+
+    return downsampled_pcd
+
+# Example usage
+input_file = "path/to/your/input_point_cloud.ply"  # Replace with your input file path
+output_file = "path/to/your/output_point_cloud.ply"  # Replace with your output file path
+voxel_size = 0.05  # Adjust the voxel size as needed
+
+downsampled_pcd = downsample_point_cloud(input_file, output_file, voxel_size)
+
+# Visualize the downsampled point cloud
+o3d.visualization.draw_geometries([downsampled_pcd])
