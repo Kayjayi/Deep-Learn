@@ -1,0 +1,52 @@
+import logging
+import azure.functions as func
+from azure.storage.blob import BlobServiceClient, ContentSettings
+import os
+from io import BytesIO
+
+def main(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('Python HTTP trigger function processed a request.')
+
+    directory_name = req.params.get('directoryName')
+    file_name = req.params.get('fileName')
+    container_name = req.params.get('containerName')
+    account_name = req.params.get('accountName')
+    account_key = req.params.get('accountKey')
+
+    if not directory_name or not file_name or not container_name or not account_name or not account_key:
+        return func.HttpResponse(
+            "Please pass directoryName, fileName, containerName, accountName, and accountKey on the query string",
+            status_code=400
+        )
+
+    try:
+        # Read file from request
+        file_bytes = req.get_body()
+
+        # Connect to Blob Service
+        blob_service_client = BlobServiceClient(
+            account_url=f"https://{account_name}.blob.core.windows.net",
+            credential=account_key
+        )
+
+        # Get container client
+        container_client = blob_service_client.get_container_client(container_name)
+        
+        # Create container if it does not exist
+        if not container_client.exists():
+            container_client.create_container()
+
+        # Create directory by uploading a zero-byte file (if it doesn't exist)
+        directory_blob_client = container_client.get_blob_client(f"{directory_name}/")
+        if not directory_blob_client.exists():
+            directory_blob_client.upload_blob(BytesIO(b''))
+
+        # Upload the file to the directory
+        file_blob_client = container_client.get_blob_client(f"{directory_name}/{file_name}")
+        file_blob_client.upload_blob(BytesIO(file_bytes), overwrite=True)
+
+        return func.HttpResponse(f"Uploaded file '{file_name}' to directory '{directory_name}' inside container '{container_name}'", status_code=200)
+
+    except Exception as e:
+        logging.error(f"An error occurred: {str(e)}")
+        return func.HttpResponse(f"An error occurred: {str(e)}", status_code=500)
