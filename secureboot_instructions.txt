@@ -1,0 +1,61 @@
+
+Secure Boot — Manual Platform Key Installation (Option 2: efi-updatevar, no USB)
+===============================================================================
+
+Prerequisites
+-------------
+- Machine boots in UEFI mode (check: directory /sys/firmware/efi exists)
+- Secure Boot currently disabled; platform is in Setup Mode (your screenshot shows this)
+- Ubuntu/Debian-like system with sudo
+
+Steps
+-----
+1) Install tools:
+   sudo apt update
+   sudo apt install efitools sbsigntool openssl uuid-runtime
+
+2) Run the script (it will do everything end-to-end):
+   sudo bash secureboot_enroll.sh
+   - Use --force to overwrite existing files in ~/secureboot-keys
+
+What the script does:
+- Generates PK, KEK, db keys/certs (2048-bit RSA, 10-year validity)
+- Produces ESL and AUTH files in correct trust order
+- Enrolls PK → KEK → db using efi-updatevar
+- Prints the next steps and troubleshooting tips
+
+After enrollment:
+-----------------
+1) Reboot into BIOS/UEFI Setup
+2) Go to Security → Secure Boot
+   - Mode should be User Mode
+   - Keys should be present
+3) Turn Secure Boot ON, Save & Exit
+
+Back in Linux, verify:
+----------------------
+sudo mokutil --sb-state
+sudo efi-readvar
+
+Optional: sign custom bootloaders or kernels with db.key/db.crt:
+----------------------------------------------------------------
+sudo sbsign --key ~/secureboot-keys/db.key --cert ~/secureboot-keys/db.crt   --output /boot/efi/EFI/ubuntu/grubx64.efi.signed /boot/efi/EFI/ubuntu/grubx64.efi
+
+Troubleshooting
+---------------
+- "Operation not permitted" or "Invalid parameter" during efi-updatevar:
+  • Firmware may block OS-level enrollment; use KeyTool.efi from a USB in pre-boot.
+- Not booted in UEFI mode: no /sys/firmware/efi → switch firmware to UEFI (not legacy/CSM).
+- Not in Setup Mode: if PK already exists, you must clear PK in BIOS to re-take ownership.
+
+Security Notes
+--------------
+- Keep PK.key, KEK.key, db.key private. Back them up securely (encrypted storage).
+- If you rotate keys later, use KEK to update db; to replace KEK or PK, you must be in Setup Mode.
+
+Files created
+-------------
+~/secureboot-keys/
+  PK.key  PK.crt  PK.esl  PK.auth
+  KEK.key KEK.crt KEK.esl KEK.auth
+  db.key  db.crt  db.esl  db.auth
